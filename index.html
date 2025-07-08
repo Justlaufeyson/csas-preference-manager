@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DU CSAS Preference Manager</title>
+    <!-- React and ReactDOM CDNs -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX transformation in browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Base Lucide icon styling */
+        .lucide {
+            width: 1.25rem;
+            height: 1.25rem;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+        /* Custom styling for the rank input to ensure it's small and centered */
+        .rank-input {
+            width: 60px; /* Fixed width for consistency */
+            text-align: center;
+            -moz-appearance: textfield; /* Hide Firefox number input arrows */
+        }
+        .rank-input::-webkit-outer-spin-button,
+        .rank-input::-webkit-inner-spin-button {
+            -webkit-appearance: none; /* Hide Chrome/Safari number input arrows */
+            margin: 0;
+        }
+        /* Styling for drag-and-drop */
+        .dragging {
+            opacity: 0.5;
+            border: 2px dashed #3B82F6; /* Blue border for dragging item */
+            background-color: #DBEAFE; /* Light blue background */
+        }
+        .drag-over {
+            border-top: 2px solid #10B981; /* Green border for drag target */
+        }
+        /* Print styles */
+        @media print {
+            body > div:not(#root) {
+                display: none; /* Hide everything except the root div */
+            }
+            #root {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                box-shadow: none;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .preference-item {
+                border: 1px solid #e5e7eb;
+                margin-bottom: 5px;
+                padding: 10px;
+                page-break-inside: avoid; /* Avoid breaking preference items across pages */
+            }
+            .preference-item .flex-1 {
+                flex-grow: 1;
+            }
+            .preference-item .flex-none {
+                display: none; /* Hide action buttons in print */
+            }
+            h1, h2, h3, p {
+                color: #000 !important; /* Ensure black text for printing */
+            }
+            .bg-gradient-to-r, .bg-gray-50, .bg-blue-50 {
+                background-color: #fff !important; /* White background for print */
+                background-image: none !important;
+            }
+            .text-white, .text-blue-100, .text-blue-800, .text-blue-900, .text-yellow-700, .text-yellow-800 {
+                color: #000 !important;
+            }
+            .rounded-lg, .rounded-full, .rounded {
+                border-radius: 0 !important;
+            }
+            .shadow-md, .shadow-sm, .shadow-xl, .shadow-lg {
+                box-shadow: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect, useCallback } = React;
+        
+        // --- Lucide Icons (SVG Components) ---
+        const ChevronUp = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg>);
+        const ChevronDown = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>);
+        const X = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>);
+        const Download = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>);
+        const Upload = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>);
+        const Plus = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>);
+        const Search = () => (<svg className="lucide" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>);
+        const Filter = () => (<svg className="lucide" viewBox="0 0 24 24"><polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"/></svg>);
+        const FileText = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>);
+        const Edit = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>);
+        const Undo = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="M9.5 12.5V7a5 5 0 0 1 10 0v.5c0 1.3-.84 2.5-2.06 3.12"/><path d="M2.83 9a4.994 4.994 0 0 0 7.17 0"/></svg>);
+        const Redo = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="M14.5 11.5V17a5 5 0 0 1-10 0v-.5c0-1.3.84-2.5 2.06-3.12"/><path d="M21.17 15a4.994 4.994 0 0 0-7.17 0"/></svg>);
+        const Printer = () => (<svg className="lucide" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>);
+
+        const DUPreferenceManager = () => {
+            // --- State Management ---
+            const [preferences, setPreferences] = useState([]);
+            const [newPreference, setNewPreference] = useState({
+                college: '',
+                program: '',
+                combination: '',
+                cutoff: ''
+            });
+            const [showAddForm, setShowAddForm] = useState(false);
+            const [showTextImportGuide, setShowTextImportGuide] = useState(false);
+            const [filters, setFilters] = useState({
+                college: '',
+                program: '',
+                combination: ''
+            });
+            const [editingPreference, setEditingPreference] = useState(null); // Stores the preference being edited
+            const [messageBox, setMessageBox] = useState({ visible: false, title: '', message: '', onConfirm: null, isConfirm: false });
+            
+            // For Undo/Redo
+            const [history, setHistory] = useState([]);
+            const [historyIndex, setHistoryIndex] = useState(-1);
+
+            // Drag and Drop state
+            const [draggedItem, setDraggedItem] = useState(null);
+            const dragOverRef = useRef(null); // To keep track of the element being dragged over
+
+            // --- Refs for file inputs ---
+            const fileInputRef = useRef(null);
+            const textFileInputRef = useRef(null);
+            
+            const combinationOptions = [
+                'Best of Four', 'PCM', 'PCB', 'Best of Four with Mathematics', 'Best of Four with English'
+            ];
+
+            // --- Local Storage Persistence ---
+            useEffect(() => {
+                // Load preferences from local storage on initial mount
+                try {
+                    const storedPreferences = localStorage.getItem('duCsasPreferences');
+                    if (storedPreferences) {
+                        const parsedPreferences = JSON.parse(storedPreferences);
+                        setPreferences(parsedPreferences);
+                        // Initialize history with the loaded state
+                        setHistory([parsedPreferences]);
+                        setHistoryIndex(0);
+                    } else {
+                        // If no preferences, initialize with default data and add to history
+                        const defaultPreferences = [
+                            { id: 1, college: 'Hindu College', program: 'B.A. (Hons.) English', combination: 'Best of Four', cutoff: '98.5%' },
+                            { id: 2, college: 'St. Stephen\'s College', program: 'B.A. (Hons.) Economics', combination: 'Best of Four', cutoff: '99.25%' },
+                            { id: 3, college: 'Lady Shri Ram College', program: 'B.A. (Hons.) Psychology', combination: 'Best of Four', cutoff: '98.75%' },
+                            { id: 4, college: 'Miranda House', program: 'B.Sc. (Hons.) Mathematics', combination: 'PCM', cutoff: '97.5%' },
+                            { id: 5, college: 'Hansraj College', program: 'B.Com (Hons.)', combination: 'Best of Four', cutoff: '97.25%' }
+                        ];
+                        setPreferences(defaultPreferences);
+                        setHistory([defaultPreferences]);
+                        setHistoryIndex(0);
+                    }
+                } catch (error) {
+                    console.error("Failed to load preferences from local storage:", error);
+                    // Fallback to default if parsing fails
+                    const defaultPreferences = [
+                        { id: 1, college: 'Hindu College', program: 'B.A. (Hons.) English', combination: 'Best of Four', cutoff: '98.5%' },
+                        { id: 2, college: 'St. Stephen\'s College', program: 'B.A. (Hons.) Economics', combination: 'Best of Four', cutoff: '99.25%' },
+                        { id: 3, college: 'Lady Shri Ram College', program: 'B.A. (Hons.) Psychology', combination: 'Best of Four', cutoff: '98.75%' },
+                        { id: 4, college: 'Miranda House', program: 'B.Sc. (Hons.) Mathematics', combination: 'PCM', cutoff: '97.5%' },
+                        { id: 5, college: 'Hansraj College', program: 'B.Com (Hons.)', combination: 'Best of Four', cutoff: '97.25%' }
+                    ];
+                    setPreferences(defaultPreferences);
+                    setHistory([defaultPreferences]);
+                    setHistoryIndex(0);
+                }
+            }, []);
+
+            useEffect(() => {
+                // Save preferences to local storage whenever they change
+                localStorage.setItem('duCsasPreferences', JSON.stringify(preferences));
+            }, [preferences]);
+
+            // --- Undo/Redo Logic ---
+            const updatePreferencesAndHistory = useCallback((newPrefs) => {
+                const newHistory = history.slice(0, historyIndex + 1);
+                newHistory.push(newPrefs);
+                setHistory(newHistory);
+                setHistoryIndex(newHistory.length - 1);
+                setPreferences(newPrefs);
+            }, [history, historyIndex]);
+
+            const undo = () => {
+                if (historyIndex > 0) {
+                    const prevIndex = historyIndex - 1;
+                    setHistoryIndex(prevIndex);
+                    setPreferences(history[prevIndex]);
+                }
+            };
+
+            const redo = () => {
+                if (historyIndex < history.length - 1) {
+                    const nextIndex = historyIndex + 1;
+                    setHistoryIndex(nextIndex);
+                    setPreferences(history[nextIndex]);
+                }
+            };
+
+            // --- Preference Actions ---
+            const updatePreferenceRank = (id, newRankInput) => {
+                const currentRank = preferences.findIndex(pref => pref.id === id) + 1;
+                const parsedNewRank = parseInt(newRankInput, 10);
+
+                if (isNaN(parsedNewRank) || parsedNewRank < 1 || parsedNewRank > preferences.length) {
+                    showMessageBox('Invalid Rank', `Please enter a rank between 1 and ${preferences.length}.`);
+                    return;
+                }
+
+                if (parsedNewRank === currentRank) {
+                    return; // No change needed
+                }
+
+                const newPreferences = [...preferences];
+                const [movedItem] = newPreferences.splice(currentRank - 1, 1);
+                newPreferences.splice(parsedNewRank - 1, 0, movedItem);
+                
+                updatePreferencesAndHistory(newPreferences);
+            };
+
+
+            const movePreference = (id, direction) => {
+                const currentIndex = preferences.findIndex(pref => pref.id === id);
+                if (
+                    (direction === 'up' && currentIndex === 0) ||
+                    (direction === 'down' && currentIndex === preferences.length - 1)
+                ) {
+                    return;
+                }
+                
+                const newPreferences = [...preferences];
+                const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+                
+                [newPreferences[currentIndex], newPreferences[targetIndex]] = 
+                [newPreferences[targetIndex], newPreferences[currentIndex]];
+                
+                updatePreferencesAndHistory(newPreferences);
+            };
+
+            const deletePreference = (id) => {
+                showConfirmBox('Confirm Deletion', 'Are you sure you want to delete this preference?', () => {
+                    const newPreferences = preferences.filter(pref => pref.id !== id);
+                    updatePreferencesAndHistory(newPreferences);
+                });
+            };
+
+            const addPreference = () => {
+                // Data validation
+                if (!newPreference.college.trim() || !newPreference.program.trim() || !newPreference.combination.trim()) {
+                    showMessageBox('Missing Information', 'College, Program, and Combination are required fields.');
+                    return;
+                }
+
+                const newPref = {
+                    id: Date.now(), // Unique ID for new preference
+                    ...newPreference
+                };
+                updatePreferencesAndHistory([...preferences, newPref]);
+                setNewPreference({ college: '', program: '', combination: '', cutoff: '' });
+                setShowAddForm(false);
+            };
+
+            const handleEditPreference = (pref) => {
+                setEditingPreference({ ...pref }); // Create a copy to edit
+            };
+
+            const saveEditedPreference = () => {
+                // Data validation for edited preference
+                if (!editingPreference.college.trim() || !editingPreference.program.trim() || !editingPreference.combination.trim()) {
+                    showMessageBox('Missing Information', 'College, Program, and Combination are required fields.');
+                    return;
+                }
+
+                const updatedPreferences = preferences.map(pref => 
+                    pref.id === editingPreference.id ? editingPreference : pref
+                );
+                updatePreferencesAndHistory(updatedPreferences);
+                setEditingPreference(null); // Close the edit form
+            };
+
+            const clearAllPreferences = () => {
+                showConfirmBox('Clear All Preferences', 'Are you sure you want to clear ALL preferences? This cannot be undone (except with Undo button).', () => {
+                    updatePreferencesAndHistory([]);
+                });
+            };
+
+            const bulkDeleteFilteredPreferences = () => {
+                const filteredIds = new Set(filteredPreferences.map(pref => pref.id));
+                if (filteredIds.size === 0) {
+                    showMessageBox('No Preferences to Delete', 'There are no preferences matching the current filters to delete.');
+                    return;
+                }
+
+                showConfirmBox(
+                    'Confirm Bulk Deletion',
+                    `Are you sure you want to delete ${filteredIds.size} preference(s) matching the current filters? This action cannot be undone (except with Undo button).`,
+                    () => {
+                        const newPreferences = preferences.filter(pref => !filteredIds.has(pref.id));
+                        updatePreferencesAndHistory(newPreferences);
+                        showMessageBox('Success', `Successfully deleted ${filteredIds.size} preference(s).`);
+                    }
+                );
+            };
+
+            // --- Import/Export Functions ---
+            const exportPreferences = () => {
+                const dataStr = JSON.stringify(preferences, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                const exportFileDefaultName = `DU_CSAS_Preferences_${new Date().toISOString().split('T')[0]}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+            };
+
+            const exportPreferencesAsText = () => {
+                // Format: Rank. College - Program (Combination) [Cutoff]
+                const textContent = preferences.map((pref, index) => {
+                    const rank = index + 1;
+                    const cutoff = pref.cutoff ? ` [${pref.cutoff}]` : '';
+                    return `${rank}. ${pref.college} - ${pref.program} (${pref.combination})${cutoff}`;
+                }).join('\n');
+
+                const dataUri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(textContent);
+                const exportFileDefaultName = `DU_CSAS_Preferences_List_${new Date().toISOString().split('T')[0]}.txt`;
+
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+            };
+
+            const importPreferences = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const importedPreferences = JSON.parse(e.target.result);
+                            // Assign new unique IDs to imported preferences to avoid conflicts
+                            const preferencesWithNewIds = importedPreferences.map(pref => ({
+                                ...pref,
+                                id: Date.now() + Math.random() // Ensure unique ID for each imported item
+                            }));
+                            updatePreferencesAndHistory(preferencesWithNewIds);
+                            showMessageBox('Success', `Successfully imported ${preferencesWithNewIds.length} preferences from JSON!`);
+                        } catch (error) {
+                            console.error('Error importing JSON file:', error);
+                            showMessageBox('Error', 'Error importing JSON file. Please check the file format.');
+                        }
+                    };
+                    reader.readAsText(file);
+                    // Clear the file input value to allow importing the same file again
+                    event.target.value = '';
+                }
+            };
+
+            const parseTextLine = (line) => {
+                line = line.trim();
+                if (!line) return null;
+                
+                // Try different formats
+                // Format 1: College | Program | Combination | Cutoff
+                if (line.includes('|')) {
+                    const parts = line.split('|').map(part => part.trim());
+                    return {
+                        college: parts[0] || '',
+                        program: parts[1] || '',
+                        combination: parts[2] || 'Best of Four',
+                        cutoff: parts[3] || ''
+                    };
+                }
+                
+                // Format 2: College - Program - Combination - Cutoff
+                if (line.includes(' - ')) {
+                    const parts = line.split(' - ').map(part => part.trim());
+                    return {
+                        college: parts[0] || '',
+                        program: parts[1] || '',
+                        combination: parts[2] || 'Best of Four',
+                        cutoff: parts[3] || ''
+                    };
+                }
+                
+                // Format 3: College, Program, Combination, Cutoff
+                if (line.includes(',')) {
+                    const parts = line.split(',').map(part => part.trim());
+                    return {
+                        college: parts[0] || '',
+                        program: parts[1] || '',
+                        combination: parts[2] || 'Best of Four',
+                        cutoff: parts[3] || ''
+                    };
+                }
+                
+                // Format 4: College: Program (assume Best of Four)
+                if (line.includes(':')) {
+                    const parts = line.split(':').map(part => part.trim());
+                    return {
+                        college: parts[0] || '',
+                        program: parts[1] || '',
+                        combination: 'Best of Four',
+                        cutoff: ''
+                    };
+                }
+                
+                // Format 5: Just college and program space separated (assume Best of Four)
+                const words = line.split(/\s+/);
+                if (words.length >= 2) {
+                    const collegeKeywords = ['College', 'University', 'Institute', 'School', 'Vidyalaya'];
+                    let collegeEndIndex = -1;
+                    
+                    for (let i = 0; i < words.length; i++) {
+                        if (collegeKeywords.some(keyword => words[i].toLowerCase().includes(keyword.toLowerCase()))) {
+                            collegeEndIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    if (collegeEndIndex > -1) {
+                        return {
+                            college: words.slice(0, collegeEndIndex + 1).join(' '),
+                            program: words.slice(collegeEndIndex + 1).join(' '),
+                            combination: 'Best of Four',
+                            cutoff: ''
+                        };
+                    }
+                }
+                
+                // If no clear format, treat as college name only
+                return {
+                    college: line,
+                    program: '',
+                    combination: 'Best of Four',
+                    cutoff: ''
+                };
+            };
+
+            const importTextFile = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const text = e.target.result;
+                            const lines = text.split('\n');
+                            const newPreferences = [];
+                            
+                            lines.forEach((line, index) => {
+                                const parsed = parseTextLine(line);
+                                if (parsed && parsed.college.trim()) { // Ensure college name is not empty
+                                    newPreferences.push({
+                                        id: Date.now() + index + Math.random(), // Ensure unique ID
+                                        ...parsed
+                                    });
+                                }
+                            });
+                            
+                            if (newPreferences.length > 0) {
+                                updatePreferencesAndHistory([...preferences, ...newPreferences]);
+                                showMessageBox('Success', `Successfully imported ${newPreferences.length} preferences from text file!`);
+                            } else {
+                                showMessageBox('Info', 'No valid preferences found in the file.');
+                            }
+                        } catch (error) {
+                            console.error('Error reading text file:', error);
+                            showMessageBox('Error', 'Error reading text file.');
+                        }
+                    };
+                    reader.readAsText(file);
+                    // Clear the file input value
+                    event.target.value = '';
+                }
+            };
+
+            // --- Filtering Logic ---
+            const filteredPreferences = preferences.filter(pref => {
+                return (
+                    (filters.college === '' || pref.college.toLowerCase().includes(filters.college.toLowerCase())) &&
+                    (filters.program === '' || pref.program.toLowerCase().includes(filters.program.toLowerCase())) &&
+                    (filters.combination === '' || pref.combination.toLowerCase().includes(filters.combination.toLowerCase()))
+                );
+            });
+
+            // --- Custom Message Box / Confirmation Dialog ---
+            const showMessageBox = (title, message) => {
+                setMessageBox({ visible: true, title, message, onConfirm: null, isConfirm: false });
+            };
+
+            const showConfirmBox = (title, message, onConfirmCallback) => {
+                setMessageBox({ visible: true, title, message, onConfirm: onConfirmCallback, isConfirm: true });
+            };
+
+            const hideMessageBox = (confirmed = false) => {
+                if (messageBox.isConfirm && confirmed && messageBox.onConfirm) {
+                    messageBox.onConfirm();
+                }
+                setMessageBox({ visible: false, title: '', message: '', onConfirm: null, isConfirm: false });
+            };
+
+            // --- Print Functionality ---
+            const handlePrint = () => {
+                window.print();
+            };
+
+            // --- Drag and Drop Handlers ---
+            const handleDragStart = (e, item) => {
+                setDraggedItem(item);
+                e.dataTransfer.effectAllowed = 'move';
+                // Set data for Firefox, though not strictly needed for internal drag
+                e.dataTransfer.setData('text/plain', item.id); 
+                e.currentTarget.classList.add('dragging');
+            };
+
+            const handleDragOver = (e, targetItem) => {
+                e.preventDefault(); // Necessary to allow dropping
+                if (draggedItem && draggedItem.id !== targetItem.id) {
+                    // Add visual feedback for drag over
+                    if (dragOverRef.current && dragOverRef.current !== e.currentTarget) {
+                        dragOverRef.current.classList.remove('drag-over');
+                    }
+                    e.currentTarget.classList.add('drag-over');
+                    dragOverRef.current = e.currentTarget;
+                }
+            };
+
+            const handleDragLeave = (e) => {
+                e.currentTarget.classList.remove('drag-over');
+            };
+
+            const handleDrop = (e, targetItem) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('drag-over');
+
+                if (draggedItem && draggedItem.id !== targetItem.id) {
+                    const newPreferences = [...preferences];
+                    const draggedIndex = newPreferences.findIndex(p => p.id === draggedItem.id);
+                    const targetIndex = newPreferences.findIndex(p => p.id === targetItem.id);
+
+                    if (draggedIndex !== -1 && targetIndex !== -1) {
+                        const [removed] = newPreferences.splice(draggedIndex, 1);
+                        newPreferences.splice(targetIndex, 0, removed);
+                        updatePreferencesAndHistory(newPreferences);
+                    }
+                }
+                setDraggedItem(null);
+            };
+
+            const handleDragEnd = (e) => {
+                // Clean up dragging styles
+                const draggingElement = document.querySelector('.dragging');
+                if (draggingElement) {
+                    draggingElement.classList.remove('dragging');
+                }
+                if (dragOverRef.current) {
+                    dragOverRef.current.classList.remove('drag-over');
+                }
+                setDraggedItem(null);
+            };
+
+            return (
+                <div className="max-w-6xl mx-auto p-6 bg-white min-h-screen font-sans">
+                    {/* Header Section */}
+                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-lg mb-6 shadow-lg no-print">
+                        <h1 className="text-3xl font-bold mb-2">DU CSAS Preference Manager</h1>
+                        <p className="text-blue-100">Organize and manage your Delhi University admission preferences</p>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-4 mb-6 no-print">
+                        <button
+                            onClick={() => setShowAddForm(!showAddForm)}
+                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                            title="Add a new preference"
+                        >
+                            <Plus />
+                            Add Preference
+                        </button>
+                        
+                        <button
+                            onClick={() => textFileInputRef.current?.click()}
+                            className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                            title="Import preferences from a plain text file"
+                        >
+                            <FileText />
+                            Import Text File
+                        </button>
+                        
+                        <button
+                            onClick={() => setShowTextImportGuide(!showTextImportGuide)}
+                            className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                            title="View guide for text file import formats"
+                        >
+                            <Search />
+                            Text Format Guide
+                        </button>
+
+                        <button
+                            onClick={exportPreferencesAsText}
+                            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                            title="Export preferences as a readable plain text list"
+                        >
+                            <Download />
+                            Export Text List
+                        </button>
+                        
+                        <button
+                            onClick={exportPreferences}
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                            title="Export preferences as a JSON file"
+                        >
+                            <Download />
+                            Export JSON
+                        </button>
+                        
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                            title="Import preferences from a JSON file"
+                        >
+                            <Upload />
+                            Import JSON
+                        </button>
+
+                        <button
+                            onClick={undo}
+                            disabled={historyIndex <= 0}
+                            className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Undo last action"
+                        >
+                            <Undo />
+                            Undo
+                        </button>
+
+                        <button
+                            onClick={redo}
+                            disabled={historyIndex >= history.length - 1}
+                            className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Redo last undone action"
+                        >
+                            <Redo />
+                            Redo
+                        </button>
+
+                        <button
+                            onClick={handlePrint}
+                            className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                            title="Print the current list of preferences"
+                        >
+                            <Printer />
+                            Print List
+                        </button>
+
+                        <button
+                            onClick={clearAllPreferences}
+                            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                            title="Clear all preferences from the list"
+                        >
+                            <X />
+                            Clear All
+                        </button>
+                        
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".json"
+                            onChange={importPreferences}
+                            className="hidden"
+                        />
+                        
+                        <input
+                            ref={textFileInputRef}
+                            type="file"
+                            accept=".txt"
+                            onChange={importTextFile}
+                            className="hidden"
+                        />
+                    </div>
+
+                    {/* Text Import Guide */}
+                    {showTextImportGuide && (
+                        <div className="bg-yellow-50 border border-yellow-200 p-6 rounded-lg mb-6 shadow-sm no-print">
+                            <h3 className="text-lg font-semibold mb-4 text-yellow-800">Text File Format Guide</h3>
+                            <div className="text-sm text-yellow-700 space-y-3">
+                                <p className="font-medium">Your text file can use any of these formats (one preference per line):</p>
+                                
+                                <div className="space-y-2">
+                                    <div>
+                                        <strong>Format 1 (Pipe separated):</strong>
+                                        <code className="block bg-white p-2 rounded mt-1 border border-gray-200">Hindu College | B.A. (Hons.) English | Best of Four | 98.5%</code>
+                                    </div>
+                                    
+                                    <div>
+                                        <strong>Format 2 (Dash separated):</strong>
+                                        <code className="block bg-white p-2 rounded mt-1 border border-gray-200">St. Stephen's College - B.A. (Hons.) Economics - Best of Four - 99.25%</code>
+                                    </div>
+                                    
+                                    <div>
+                                        <strong>Format 3 (Comma separated):</strong>
+                                        <code className="block bg-white p-2 rounded mt-1 border border-gray-200">Lady Shri Ram College, B.A. (Hons.) Psychology, Best of Four, 98.75%</code>
+                                    </div>
+                                    
+                                    <div>
+                                        <strong>Format 4 (Colon separated):</strong>
+                                        <code className="block bg-white p-2 rounded mt-1 border border-gray-200">Miranda House: B.Sc. (Hons.) Mathematics</code>
+                                    </div>
+                                    
+                                    <div>
+                                        <strong>Format 5 (Simple):</strong>
+                                        <code className="block bg-white p-2 rounded mt-1 border border-gray-200">Hansraj College B.Com (Hons.)</code>
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-4 p-3 bg-yellow-100 rounded border border-yellow-200">
+                                    <strong>Notes:</strong>
+                                    <ul className="mt-2 space-y-1 text-xs list-disc pl-5">
+                                        <li>Each preference should be on a separate line</li>
+                                        <li>If combination is not specified, "Best of Four" will be used</li>
+                                        <li>Cutoff percentage is optional</li>
+                                        <li>Empty lines will be ignored</li>
+                                        <li>The order is: College | Program | Combination | Cutoff</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Add Form */}
+                    {showAddForm && (
+                        <div className="bg-gray-50 p-6 rounded-lg mb-6 border-2 border-dashed border-gray-300 shadow-sm no-print">
+                            <h3 className="text-xl font-semibold mb-4 text-gray-800">Add New Preference</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">College <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        value={newPreference.college}
+                                        onChange={(e) => setNewPreference({...newPreference, college: e.target.value})}
+                                        placeholder="Enter college name (e.g., Hindu College)"
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Program <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        value={newPreference.program}
+                                        onChange={(e) => setNewPreference({...newPreference, program: e.target.value})}
+                                        placeholder="Enter program name (e.g., B.A. (Hons.) English)"
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Combination <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        value={newPreference.combination}
+                                        onChange={(e) => setNewPreference({...newPreference, combination: e.target.value})}
+                                        placeholder="Enter combination (e.g., Best of Four, PCM, PCB)"
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Cutoff (Optional)</label>
+                                    <input
+                                        type="text"
+                                        value={newPreference.cutoff}
+                                        onChange={(e) => setNewPreference({...newPreference, cutoff: e.target.value})}
+                                        placeholder="e.g., 98.5%"
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div className="flex gap-4 mt-4">
+                                <button
+                                    onClick={addPreference}
+                                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors shadow-md"
+                                >
+                                    Add Preference
+                                </button>
+                                <button
+                                    onClick={() => setShowAddForm(false)}
+                                    className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors shadow-md"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Edit Preference Modal */}
+                    {editingPreference && (
+                        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 no-print">
+                            <div className="bg-white p-8 rounded-lg shadow-xl max-w-lg w-full">
+                                <h3 className="text-2xl font-bold mb-6 text-gray-800">Edit Preference</h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">College <span className="text-red-500">*</span></label>
+                                        <input
+                                            type="text"
+                                            value={editingPreference.college}
+                                            onChange={(e) => setEditingPreference({...editingPreference, college: e.target.value})}
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Program <span className="text-red-500">*</span></label>
+                                        <input
+                                            type="text"
+                                            value={editingPreference.program}
+                                            onChange={(e) => setEditingPreference({...editingPreference, program: e.target.value})}
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Combination <span className="text-red-500">*</span></label>
+                                        <input
+                                            type="text"
+                                            value={editingPreference.combination}
+                                            onChange={(e) => setEditingPreference({...editingPreference, combination: e.target.value})}
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Cutoff (Optional)</label>
+                                        <input
+                                            type="text"
+                                            value={editingPreference.cutoff}
+                                            onChange={(e) => setEditingPreference({...editingPreference, cutoff: e.target.value})}
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex justify-end gap-4 mt-6">
+                                    <button
+                                        onClick={() => setEditingPreference(null)}
+                                        className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors shadow-md"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={saveEditedPreference}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors shadow-md"
+                                    >
+                                        Save Changes
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Filters */}
+                    <div className="bg-gray-50 p-4 rounded-lg mb-6 shadow-sm no-print">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Filter />
+                            <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Filter by College</label>
+                                <input
+                                    type="text"
+                                    value={filters.college}
+                                    onChange={(e) => setFilters({...filters, college: e.target.value})}
+                                    placeholder="Type to filter colleges..."
+                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Program</label>
+                                <input
+                                    type="text"
+                                    value={filters.program}
+                                    onChange={(e) => setFilters({...filters, program: e.target.value})}
+                                    placeholder="Type to filter programs..."
+                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Combination</label>
+                                <select
+                                    value={filters.combination}
+                                    onChange={(e) => setFilters({...filters, combination: e.target.value})}
+                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                                >
+                                    <option value="">All Combinations</option>
+                                    {combinationOptions.map(combination => (
+                                        <option key={combination} value={combination}>{combination}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        {(filters.college || filters.program || filters.combination) && (
+                            <div className="flex flex-wrap gap-4 mt-4">
+                                <button
+                                    onClick={() => setFilters({college: '', program: '', combination: ''})}
+                                    className="text-blue-600 hover:text-blue-800 font-medium"
+                                >
+                                    Clear All Filters
+                                </button>
+                                {filteredPreferences.length > 0 && (
+                                    <button
+                                        onClick={bulkDeleteFilteredPreferences}
+                                        className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                                        title={`Delete all ${filteredPreferences.length} currently filtered preferences`}
+                                    >
+                                        <X />
+                                        Delete {filteredPreferences.length} Filtered
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Preferences List */}
+                    <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+                        <div className="bg-gray-50 p-4 border-b">
+                            <h2 className="text-xl font-semibold text-gray-800">
+                                Your Preferences ({filteredPreferences.length} {filteredPreferences.length === 1 ? 'item' : 'items'})
+                            </h2>
+                        </div>
+                        
+                        {filteredPreferences.length === 0 ? (
+                            <div className="p-8 text-center text-gray-500">
+                                <div className="mx-auto mb-4 text-gray-300" style={{width: '48px', height: '48px'}}>
+                                    <Search />
+                                </div>
+                                <p>No preferences found matching your filters.</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-gray-200">
+                                {filteredPreferences.map((pref, index) => {
+                                    const originalIndex = preferences.findIndex(p => p.id === pref.id);
+                                    return (
+                                        <div 
+                                            key={pref.id} 
+                                            className="p-4 hover:bg-gray-50 transition-colors preference-item"
+                                            draggable="true"
+                                            onDragStart={(e) => handleDragStart(e, pref)}
+                                            onDragOver={(e) => handleDragOver(e, pref)}
+                                            onDragLeave={handleDragLeave}
+                                            onDrop={(e) => handleDrop(e, pref)}
+                                            onDragEnd={handleDragEnd}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-4 mb-2">
+                                                        <span className="bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1 rounded-full">
+                                                            #{originalIndex + 1}
+                                                        </span>
+                                                        <h3 className="text-lg font-semibold text-gray-900">{pref.college}</h3>
+                                                        {pref.cutoff && (
+                                                            <span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">
+                                                                {pref.cutoff}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-gray-700 mb-1">{pref.program}</p>
+                                                    <p className="text-gray-500 text-sm">{pref.combination}</p>
+                                                </div>
+                                                
+                                                <div className="flex items-center gap-2 flex-none no-print">
+                                                    {/* Rank Input */}
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        max={preferences.length}
+                                                        value={originalIndex + 1}
+                                                        onChange={(e) => updatePreferenceRank(pref.id, e.target.value)}
+                                                        className="rank-input p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
+                                                        title="Edit Rank"
+                                                    />
+
+                                                    <button
+                                                        onClick={() => movePreference(pref.id, 'up')}
+                                                        disabled={originalIndex === 0}
+                                                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        title="Move up"
+                                                    >
+                                                        <ChevronUp />
+                                                    </button>
+                                                    
+                                                    <button
+                                                        onClick={() => movePreference(pref.id, 'down')}
+                                                        disabled={originalIndex === preferences.length - 1}
+                                                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        title="Move down"
+                                                    >
+                                                        <ChevronDown />
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => handleEditPreference(pref)}
+                                                        className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+                                                        title="Edit preference"
+                                                    >
+                                                        <Edit />
+                                                    </button>
+                                                    
+                                                    <button
+                                                        onClick={() => deletePreference(pref.id)}
+                                                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Delete preference"
+                                                    >
+                                                        <X />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Summary */}
+                    <div className="mt-6 p-4 bg-blue-50 rounded-lg shadow-sm no-print">
+                        <h3 className="font-semibold text-blue-900 mb-2">Summary</h3>
+                        <p className="text-blue-800">
+                            You have {preferences.length} preferences in your list. 
+                            {filteredPreferences.length !== preferences.length && 
+                                ` Showing ${filteredPreferences.length} filtered results.`
+                            }
+                        </p>
+                    </div>
+
+                    {/* Custom Message Box / Confirmation Dialog */}
+                    {messageBox.visible && (
+                        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                                <h3 className="text-xl font-bold mb-4 text-gray-800">{messageBox.title}</h3>
+                                <p className="text-gray-700 mb-6">{messageBox.message}</p>
+                                <div className="flex justify-end gap-3">
+                                    {messageBox.isConfirm && (
+                                        <button
+                                            onClick={() => hideMessageBox(false)}
+                                            className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded-lg transition-colors shadow-md"
+                                        >
+                                            Cancel
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => hideMessageBox(true)}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg transition-colors shadow-md"
+                                    >
+                                        OK
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<DUPreferenceManager />, document.getElementById('root'));
+    </script>
+</body>
+</html>
+
