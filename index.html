@@ -263,9 +263,9 @@
             };
 
             const addPreference = () => {
-                // Data validation
-                if (!newPreference.college.trim() || !newPreference.program.trim() || !newPreference.combination.trim()) {
-                    showMessageBox('Missing Information', 'College, Program, and Combination are required fields.');
+                // Data validation: Only College and Program are required now
+                if (!newPreference.college.trim() || !newPreference.program.trim()) {
+                    showMessageBox('Missing Information', 'College and Program are required fields.');
                     return;
                 }
 
@@ -283,9 +283,9 @@
             };
 
             const saveEditedPreference = () => {
-                // Data validation for edited preference
-                if (!editingPreference.college.trim() || !editingPreference.program.trim() || !editingPreference.combination.trim()) {
-                    showMessageBox('Missing Information', 'College, Program, and Combination are required fields.');
+                // Data validation for edited preference: Only College and Program are required now
+                if (!editingPreference.college.trim() || !editingPreference.program.trim()) {
+                    showMessageBox('Missing Information', 'College and Program are required fields.');
                     return;
                 }
 
@@ -385,7 +385,7 @@
                     return {
                         college: parts[0] || '',
                         program: parts[1] || '',
-                        combination: parts[2] || 'Best of Four',
+                        combination: parts[2] || '', // Combination can be empty
                         cutoff: parts[3] || ''
                     };
                 }
@@ -396,7 +396,7 @@
                     return {
                         college: parts[0] || '',
                         program: parts[1] || '',
-                        combination: parts[2] || 'Best of Four',
+                        combination: parts[2] || '', // Combination can be empty
                         cutoff: parts[3] || ''
                     };
                 }
@@ -407,7 +407,7 @@
                     return {
                         college: parts[0] || '',
                         program: parts[1] || '',
-                        combination: parts[2] || 'Best of Four',
+                        combination: parts[2] || '', // Combination can be empty
                         cutoff: parts[3] || ''
                     };
                 }
@@ -418,7 +418,7 @@
                     return {
                         college: parts[0] || '',
                         program: parts[1] || '',
-                        combination: 'Best of Four',
+                        combination: '', // Combination can be empty
                         cutoff: ''
                     };
                 }
@@ -440,7 +440,7 @@
                         return {
                             college: words.slice(0, collegeEndIndex + 1).join(' '),
                             program: words.slice(collegeEndIndex + 1).join(' '),
-                            combination: 'Best of Four',
+                            combination: '', // Combination can be empty
                             cutoff: ''
                         };
                     }
@@ -450,7 +450,7 @@
                 return {
                     college: line,
                     program: '',
-                    combination: 'Best of Four',
+                    combination: '', // Combination can be empty
                     cutoff: ''
                 };
             };
@@ -467,7 +467,7 @@
                             
                             lines.forEach((line, index) => {
                                 const parsed = parseTextLine(line);
-                                if (parsed && parsed.college.trim()) { // Ensure college name is not empty
+                                if (parsed && parsed.college.trim() && parsed.program.trim()) { // College and Program are required for text import
                                     newPreferences.push({
                                         id: Date.now() + index + Math.random(), // Ensure unique ID
                                         ...parsed
@@ -479,7 +479,7 @@
                                 updatePreferencesAndHistory([...preferences, ...newPreferences]);
                                 showMessageBox('Success', `Successfully imported ${newPreferences.length} preferences from text file!`);
                             } else {
-                                showMessageBox('Info', 'No valid preferences found in the file.');
+                                showMessageBox('Info', 'No valid preferences (College and Program required) found in the file.');
                             }
                         } catch (error) {
                             console.error('Error reading text file:', error);
@@ -497,7 +497,7 @@
                 return (
                     (filters.college === '' || pref.college.toLowerCase().includes(filters.college.toLowerCase())) &&
                     (filters.program === '' || pref.program.toLowerCase().includes(filters.program.toLowerCase())) &&
-                    (filters.combination === '' || pref.combination.toLowerCase().includes(filters.combination.toLowerCase()))
+                    (filters.combination === '' || (pref.combination && pref.combination.toLowerCase().includes(filters.combination.toLowerCase()))) // Check if combination exists before including
                 );
             });
 
@@ -768,7 +768,7 @@
                                     <strong>Notes:</strong>
                                     <ul className="mt-2 space-y-1 text-xs list-disc pl-5">
                                         <li>Each preference should be on a separate line</li>
-                                        <li>If combination is not specified, "Best of Four" will be used</li>
+                                        <li>If combination is not specified, it will be left empty</li>
                                         <li>Cutoff percentage is optional</li>
                                         <li>Empty lines will be ignored</li>
                                         <li>The order is: College | Program | Combination | Cutoff</li>
@@ -806,7 +806,7 @@
                                 </div>
                                 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Combination <span className="text-red-500">*</span></label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Combination</label> {/* Removed * */}
                                     <input
                                         type="text"
                                         value={newPreference.combination}
@@ -870,7 +870,7 @@
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Combination <span className="text-red-500">*</span></label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Combination</label> {/* Removed * */}
                                         <input
                                             type="text"
                                             value={editingPreference.combination}
