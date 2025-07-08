@@ -96,7 +96,6 @@
         const ChevronDown = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>);
         const X = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>);
         const Download = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>);
-        const Upload = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>);
         const Plus = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>);
         const Search = () => (<svg className="lucide" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>);
         const Filter = () => (<svg className="lucide" viewBox="0 0 24 24"><polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"/></svg>);
@@ -105,7 +104,7 @@
         const Undo = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="M9.5 12.5V7a5 5 0 0 1 10 0v.5c0 1.3-.84 2.5-2.06 3.12"/><path d="M2.83 9a4.994 4.994 0 0 0 7.17 0"/></svg>);
         const Redo = () => (<svg className="lucide" viewBox="0 0 24 24"><path d="M14.5 11.5V17a5 5 0 0 1-10 0v-.5c0-1.3.84-2.5 2.06-3.12"/><path d="M21.17 15a4.994 4.994 0 0 0-7.17 0"/></svg>);
         const Printer = () => (<svg className="lucide" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>);
-        // New Icons for Bookmark/Lock
+        // Icons for Bookmark/Lock
         const Star = ({ filled = false, className = "" }) => (
             <svg className={`lucide ${filled ? 'text-yellow-500 fill-current' : 'text-gray-400'} ${className}`} viewBox="0 0 24 24">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
@@ -129,8 +128,6 @@
             const [newPreference, setNewPreference] = useState({
                 college: '',
                 program: '',
-                combination: '',
-                cutoff: '',
                 bookmarked: false, // New property
                 locked: false      // New property
             });
@@ -139,7 +136,6 @@
             const [filters, setFilters] = useState({
                 college: '',
                 program: '',
-                combination: '',
                 bookmarked: 'all' // 'all', 'true', 'false'
             });
             const [editingPreference, setEditingPreference] = useState(null); // Stores the preference being edited
@@ -157,12 +153,9 @@
             const [tempRankInput, setTempRankInput] = useState({}); // { preferenceId: 'currentInputValue' }
 
             // --- Refs for file inputs ---
-            const fileInputRef = useRef(null);
-            const textFileInputRef = useRef(null);
+            const textFileInputRef = useRef(null); // Only text import remains
             
-            const combinationOptions = [
-                'Best of Four', 'PCM', 'PCB', 'Best of Four with Mathematics', 'Best of Four with English'
-            ];
+            // Combination options removed as feature is removed
 
             // --- Local Storage Persistence ---
             useEffect(() => {
@@ -173,7 +166,10 @@
                         const parsedPreferences = JSON.parse(storedPreferences);
                         // Ensure new properties are initialized for old data if not present
                         const initializedPreferences = parsedPreferences.map(pref => ({
-                            ...pref,
+                            // Only include relevant fields, filter out old ones if present
+                            id: pref.id,
+                            college: pref.college,
+                            program: pref.program,
                             bookmarked: pref.bookmarked !== undefined ? pref.bookmarked : false,
                             locked: pref.locked !== undefined ? pref.locked : false
                         }));
@@ -184,11 +180,11 @@
                     } else {
                         // If no preferences, initialize with default data and add to history
                         const defaultPreferences = [
-                            { id: 1, college: 'Hindu College', program: 'B.A. (Hons.) English', combination: 'Best of Four', cutoff: '98.5%', bookmarked: false, locked: false },
-                            { id: 2, college: 'St. Stephen\'s College', program: 'B.A. (Hons.) Economics', combination: 'Best of Four', cutoff: '99.25%', bookmarked: false, locked: false },
-                            { id: 3, college: 'Lady Shri Ram College', program: 'B.A. (Hons.) Psychology', combination: 'Best of Four', cutoff: '98.75%', bookmarked: false, locked: false },
-                            { id: 4, college: 'Miranda House', program: 'B.Sc. (Hons.) Mathematics', combination: 'PCM', cutoff: '97.5%', bookmarked: false, locked: false },
-                            { id: 5, college: 'Hansraj College', program: 'B.Com (Hons.)', combination: 'Best of Four', cutoff: '97.25%', bookmarked: false, locked: false }
+                            { id: 1, college: 'Hindu College', program: 'B.A. (Hons.) English', bookmarked: false, locked: false },
+                            { id: 2, college: 'St. Stephen\'s College', program: 'B.A. (Hons.) Economics', bookmarked: false, locked: false },
+                            { id: 3, college: 'Lady Shri Ram College', program: 'B.A. (Hons.) Psychology', bookmarked: false, locked: false },
+                            { id: 4, college: 'Miranda House', program: 'B.Sc. (Hons.) Mathematics', bookmarked: false, locked: false },
+                            { id: 5, college: 'Hansraj College', program: 'B.Com (Hons.)', bookmarked: false, locked: false }
                         ];
                         setPreferences(defaultPreferences);
                         setHistory([defaultPreferences]);
@@ -198,11 +194,11 @@
                     console.error("Failed to load preferences from local storage:", error);
                     // Fallback to default if parsing fails
                     const defaultPreferences = [
-                        { id: 1, college: 'Hindu College', program: 'B.A. (Hons.) English', combination: 'Best of Four', cutoff: '98.5%', bookmarked: false, locked: false },
-                        { id: 2, college: 'St. Stephen\'s College', program: 'B.A. (Hons.) Economics', combination: 'Best of Four', cutoff: '99.25%', bookmarked: false, locked: false },
-                        { id: 3, college: 'Lady Shri Ram College', program: 'B.A. (Hons.) Psychology', combination: 'Best of Four', cutoff: '98.75%', bookmarked: false, locked: false },
-                        { id: 4, college: 'Miranda House', program: 'B.Sc. (Hons.) Mathematics', combination: 'PCM', cutoff: '97.5%', bookmarked: false, locked: false },
-                        { id: 5, college: 'Hansraj College', program: 'B.Com (Hons.)', combination: 'Best of Four', cutoff: '97.25%', bookmarked: false, locked: false }
+                        { id: 1, college: 'Hindu College', program: 'B.A. (Hons.) English', bookmarked: false, locked: false },
+                        { id: 2, college: 'St. Stephen\'s College', program: 'B.A. (Hons.) Economics', bookmarked: false, locked: false },
+                        { id: 3, college: 'Lady Shri Ram College', program: 'B.A. (Hons.) Psychology', bookmarked: false, locked: false },
+                        { id: 4, college: 'Miranda House', program: 'B.Sc. (Hons.) Mathematics', bookmarked: false, locked: false },
+                        { id: 5, college: 'Hansraj College', program: 'B.Com (Hons.)', bookmarked: false, locked: false }
                     ];
                     setPreferences(defaultPreferences);
                     setHistory([defaultPreferences]);
@@ -244,6 +240,7 @@
             const isPathBlockedByLockedItem = (startIndex, endIndex, currentPreferences) => {
                 const start = Math.min(startIndex, endIndex);
                 const end = Math.max(startIndex, endIndex);
+                // Iterate through the range, excluding the item being moved itself
                 for (let i = start; i <= end; i++) {
                     if (currentPreferences[i] && currentPreferences[i].locked) {
                         return true;
@@ -274,14 +271,22 @@
                     return true; // No change needed, but valid input
                 }
 
+                // Create a temporary array to check path without modifying original preferences
+                const tempPreferencesForPathCheck = [...preferences];
+                // Temporarily remove the item being moved from its current position for path check
+                tempPreferencesForPathCheck.splice(currentRankIndex, 1);
+                // Adjust targetIndex if the moved item was before the target
+                const adjustedTargetIndex = currentRankIndex < targetRankIndex ? targetRankIndex - 1 : targetRankIndex;
+
                 // Check if the target position is locked OR if the path is blocked by a locked item
                 if (preferences[targetRankIndex] && preferences[targetRankIndex].locked) {
                     showMessageBox('Action Blocked', `Cannot move to rank ${parsedNewRank}: that position is locked.`);
                     return false;
                 }
-                if (isPathBlockedByLockedItem(currentRankIndex, targetRankIndex, preferences)) {
-                    showMessageBox('Action Blocked', 'Cannot move preference: the path is blocked by a locked item.');
-                    return false;
+                // Check path for locked items, excluding the item being moved itself
+                if (isPathBlockedByLockedItem(Math.min(currentRankIndex, targetRankIndex), Math.max(currentRankIndex, targetRankIndex), preferences)) {
+                     showMessageBox('Action Blocked', 'Cannot move preference: the path is blocked by a locked item.');
+                     return false;
                 }
 
 
@@ -311,7 +316,7 @@
                 
                 const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
 
-                // Check if the target position is locked OR if the path is blocked by a locked item
+                // Check if the target position is locked
                 if (preferences[targetIndex] && preferences[targetIndex].locked) {
                     showMessageBox('Action Blocked', `Cannot move preference: the target position is locked.`);
                     return;
@@ -354,7 +359,7 @@
                     ...newPreference
                 };
                 updatePreferencesAndHistory([...preferences, newPref]);
-                setNewPreference({ college: '', program: '', combination: '', cutoff: '', bookmarked: false, locked: false });
+                setNewPreference({ college: '', program: '', bookmarked: false, locked: false }); // Reset state
                 setShowAddForm(false);
             };
 
@@ -430,27 +435,14 @@
                 updatePreferencesAndHistory(newPreferences);
             };
 
-            // --- Import/Export Functions ---
-            const exportPreferences = () => {
-                const dataStr = JSON.stringify(preferences, null, 2);
-                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-                const exportFileDefaultName = `DU_CSAS_Preferences_${new Date().toISOString().split('T')[0]}.json`;
-                
-                const linkElement = document.createElement('a');
-                linkElement.setAttribute('href', dataUri);
-                linkElement.setAttribute('download', exportFileDefaultName);
-                linkElement.click();
-            };
-
+            // --- Import/Export Functions (JSON removed) ---
             const exportPreferencesAsText = () => {
-                // Format: Rank. College - Program (Combination) [Cutoff] [Bookmarked] [Locked]
+                // Format: Rank. College - Program [Bookmarked] [Locked]
                 const textContent = preferences.map((pref, index) => {
                     const rank = index + 1;
-                    const cutoff = pref.cutoff ? ` [${pref.cutoff}]` : '';
-                    const combination = pref.combination ? ` (${pref.combination})` : '';
                     const bookmarked = pref.bookmarked ? ' [Bookmarked]' : '';
                     const locked = pref.locked ? ' [Locked]' : '';
-                    return `${rank}. ${pref.college} - ${pref.program}${combination}${cutoff}${bookmarked}${locked}`;
+                    return `${rank}. ${pref.college} - ${pref.program}${bookmarked}${locked}`;
                 }).join('\n');
 
                 const dataUri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(textContent);
@@ -462,41 +454,13 @@
                 linkElement.click();
             };
 
-            const importPreferences = (event) => {
-                const file = event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        try {
-                            const importedPreferences = JSON.parse(e.target.result);
-                            // Assign new unique IDs and initialize new properties for imported preferences
-                            const preferencesWithNewIds = importedPreferences.map(pref => ({
-                                ...pref,
-                                id: Date.now() + Math.random(), // Ensure unique ID for each imported item
-                                bookmarked: pref.bookmarked !== undefined ? pref.bookmarked : false,
-                                locked: pref.locked !== undefined ? pref.locked : false
-                            }));
-                            updatePreferencesAndHistory(preferencesWithNewIds);
-                            showMessageBox('Success', `Successfully imported ${preferencesWithNewIds.length} preferences from JSON!`);
-                        } catch (error) {
-                            console.error('Error importing JSON file:', error);
-                            showMessageBox('Error', 'Error importing JSON file. Please check the file format.');
-                        }
-                    };
-                    reader.readAsText(file);
-                    // Clear the file input value to allow importing the same file again
-                    event.target.value = '';
-                }
-            };
-
+            // Text Import function (simplified to only dash-separated)
             const parseTextLine = (line) => {
                 line = line.trim();
                 if (!line) return null;
                 
                 let college = '';
                 let program = '';
-                let combination = '';
-                let cutoff = '';
                 let bookmarked = false;
                 let locked = false;
 
@@ -510,38 +474,24 @@
                     line = line.replace('[Locked]', '').trim();
                 }
 
-                // Check for cutoff at the end and remove it for parsing
-                const cutoffMatch = line.match(/\[(.*?)%?\]$/);
-                if (cutoffMatch && cutoffMatch[1]) {
-                    cutoff = cutoffMatch[1] + (line.includes('%') ? '%' : '');
-                    line = line.replace(cutoffMatch[0], '').trim();
-                }
-
-                // Check for combination in parentheses and remove it
-                const combinationMatch = line.match(/\((.*?)\)$/);
-                if (combinationMatch && combinationMatch[1]) {
-                    combination = combinationMatch[1];
-                    line = line.replace(combinationMatch[0], '').trim();
-                }
-
                 // Remove rank number if present (e.g., "1. ")
                 line = line.replace(/^\d+\.\s*/, '').trim();
 
-                // Now parse the remaining college - program string
+                // Expect only "College - Program" format now
                 const parts = line.split(' - ').map(part => part.trim());
-                if (parts.length >= 2) {
+                if (parts.length === 2) {
                     college = parts[0];
                     program = parts[1];
-                } else if (parts.length === 1) {
-                    // If only one part, assume it's college and program might be empty or combined
-                    college = parts[0];
+                } else {
+                    // If not exactly two parts separated by ' - ', it's invalid for this format
+                    return null;
                 }
                 
                 if (!college.trim() || !program.trim()) {
-                    return null; // Must have at least college and program
+                    return null; // Must have non-empty college and program
                 }
 
-                return { college, program, combination, cutoff, bookmarked, locked };
+                return { college, program, bookmarked, locked };
             };
 
 
@@ -554,22 +504,29 @@
                             const text = e.target.result;
                             const lines = text.split('\n');
                             const newPreferences = [];
+                            let invalidLinesCount = 0;
                             
                             lines.forEach((line, index) => {
                                 const parsed = parseTextLine(line);
-                                if (parsed) { // parsed will be null if college or program are empty
+                                if (parsed) { // parsed will be null if college or program are empty or format is wrong
                                     newPreferences.push({
                                         id: Date.now() + index + Math.random(), // Ensure unique ID
                                         ...parsed
                                     });
+                                } else if (line.trim() !== '') {
+                                    invalidLinesCount++;
                                 }
                             });
                             
                             if (newPreferences.length > 0) {
                                 updatePreferencesAndHistory([...preferences, ...newPreferences]);
-                                showMessageBox('Success', `Successfully imported ${newPreferences.length} preferences from text file!`);
+                                let message = `Successfully imported ${newPreferences.length} preferences from text file!`;
+                                if (invalidLinesCount > 0) {
+                                    message += ` Note: ${invalidLinesCount} line(s) were skipped due to incorrect format or missing required fields.`;
+                                }
+                                showMessageBox('Import Complete', message);
                             } else {
-                                showMessageBox('Info', 'No valid preferences (College and Program required) found in the file.');
+                                showMessageBox('Import Failed', 'No valid preferences (College - Program format required) found in the file. Please check the guide.');
                             }
                         } catch (error) {
                             console.error('Error reading text file:', error);
@@ -586,9 +543,6 @@
             const filteredPreferences = preferences.filter(pref => {
                 const collegeMatch = filters.college === '' || pref.college.toLowerCase().includes(filters.college.toLowerCase());
                 const programMatch = filters.program === '' || pref.program.toLowerCase().includes(filters.program.toLowerCase());
-                const combinationMatch = filters.combination === '' || (pref.combination && pref.combination.toLowerCase().includes(filters.combination.toLowerCase()));
-                // New filter logic for 'empty' combination
-                const combinationFilterMatch = filters.combination === 'empty' ? !pref.combination.trim() : combinationMatch;
                 
                 let bookmarkedMatch = true;
                 if (filters.bookmarked === 'true') {
@@ -597,7 +551,7 @@
                     bookmarkedMatch = pref.bookmarked === false;
                 }
 
-                return collegeMatch && programMatch && combinationFilterMatch && bookmarkedMatch;
+                return collegeMatch && programMatch && bookmarkedMatch;
             });
 
             // --- Custom Message Box / Confirmation Dialog ---
@@ -732,16 +686,16 @@
             return (
                 <div className="max-w-6xl mx-auto p-6 bg-white min-h-screen font-sans">
                     {/* Header Section */}
-                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-lg mb-6 shadow-lg no-print">
+                    <div className="bg-stone-800 text-stone-100 p-6 rounded-lg mb-6 shadow-lg no-print">
                         <h1 className="text-3xl font-bold mb-2">DU CSAS Preference Manager</h1>
-                        <p className="text-blue-100">Organize and manage your Delhi University admission preferences</p>
+                        <p className="text-stone-200">Organize and manage your Delhi University admission preferences</p>
                     </div>
 
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-4 mb-6 no-print">
                         <button
                             onClick={() => setShowAddForm(!showAddForm)}
-                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
                             title="Add a new preference"
                         >
                             <Plus />
@@ -750,7 +704,7 @@
                         
                         <button
                             onClick={() => textFileInputRef.current?.click()}
-                            className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
                             title="Import preferences from a plain text file"
                         >
                             <FileText />
@@ -759,7 +713,7 @@
                         
                         <button
                             onClick={() => setShowTextImportGuide(!showTextImportGuide)}
-                            className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
                             title="View guide for text file import formats"
                         >
                             <Search />
@@ -768,31 +722,13 @@
 
                         <button
                             onClick={exportPreferencesAsText}
-                            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
                             title="Export preferences as a readable plain text list"
                         >
                             <Download />
                             Export Text List
                         </button>
                         
-                        <button
-                            onClick={exportPreferences}
-                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
-                            title="Export preferences as a JSON file"
-                        >
-                            <Download />
-                            Export JSON
-                        </button>
-                        
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
-                            title="Import preferences from a JSON file"
-                        >
-                            <Upload />
-                            Import JSON
-                        </button>
-
                         <button
                             onClick={undo}
                             disabled={historyIndex <= 0}
@@ -815,7 +751,7 @@
 
                         <button
                             onClick={handlePrint}
-                            className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
                             title="Print the current list of preferences"
                         >
                             <Printer />
@@ -832,14 +768,6 @@
                         </button>
                         
                         <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".json"
-                            onChange={importPreferences}
-                            className="hidden"
-                        />
-                        
-                        <input
                             ref={textFileInputRef}
                             type="file"
                             accept=".txt"
@@ -850,47 +778,34 @@
 
                     {/* Text Import Guide */}
                     {showTextImportGuide && (
-                        <div className="bg-yellow-50 border border-yellow-200 p-6 rounded-lg mb-6 shadow-sm no-print">
-                            <h3 className="text-lg font-semibold mb-4 text-yellow-800">Text File Format Guide</h3>
-                            <div className="text-sm text-yellow-700 space-y-3">
-                                <p className="font-medium">Your text file can use any of these formats (one preference per line):</p>
+                        <div className="bg-gray-50 border border-gray-200 p-6 rounded-lg mb-6 shadow-sm no-print">
+                            <h3 className="text-lg font-semibold mb-4 text-gray-800">Text File Format Guide</h3>
+                            <div className="text-sm text-gray-700 space-y-3">
+                                <p className="font-medium">Your text file should use the following format (one preference per line):</p>
                                 
                                 <div className="space-y-2">
                                     <div>
-                                        <strong>Format 1 (Pipe separated):</strong>
-                                        <code className="block bg-white p-2 rounded mt-1 border border-gray-200">Hindu College | B.A. (Hons.) English | Best of Four | 98.5%</code>
+                                        <strong>Format:</strong>
+                                        <code className="block bg-white p-2 rounded mt-1 border border-gray-200">College Name - Program Name [Optional Tags]</code>
                                     </div>
                                     
                                     <div>
-                                        <strong>Format 2 (Dash separated):</strong>
-                                        <code className="block bg-white p-2 rounded mt-1 border border-gray-200">St. Stephen's College - B.A. (Hons.) Economics - Best of Four - 99.25%</code>
-                                    </div>
-                                    
-                                    <div>
-                                        <strong>Format 3 (Comma separated):</strong>
-                                        <code className="block bg-white p-2 rounded mt-1 border border-gray-200">Lady Shri Ram College, B.A. (Hons.) Psychology, Best of Four, 98.75%</code>
-                                    </div>
-                                    
-                                    <div>
-                                        <strong>Format 4 (Colon separated):</strong>
-                                        <code className="block bg-white p-2 rounded mt-1 border border-gray-200">Miranda House: B.Sc. (Hons.) Mathematics</code>
-                                    </div>
-                                    
-                                    <div>
-                                        <strong>Format 5 (Simple):</strong>
-                                        <code className="block bg-white p-2 rounded mt-1 border border-gray-200">Hansraj College B.Com (Hons.)</code>
+                                        <strong>Example:</strong>
+                                        <code className="block bg-white p-2 rounded mt-1 border border-gray-200">Hindu College - B.A. (Hons.) English [Bookmarked]</code>
+                                        <code className="block bg-white p-2 rounded mt-1 border border-gray-200">St. Stephen's College - B.A. (Hons.) Economics [Locked]</code>
+                                        <code className="block bg-white p-2 rounded mt-1 border border-gray-200">Lady Shri Ram College - B.A. (Hons.) Psychology [Bookmarked] [Locked]</code>
+                                        <code className="block bg-white p-2 rounded mt-1 border border-gray-200">Miranda House - B.Sc. (Hons.) Mathematics</code>
                                     </div>
                                 </div>
                                 
-                                <div className="mt-4 p-3 bg-yellow-100 rounded border border-yellow-200">
+                                <div className="mt-4 p-3 bg-gray-100 rounded border border-gray-200">
                                     <strong>Notes:</strong>
                                     <ul className="mt-2 space-y-1 text-xs list-disc pl-5">
-                                        <li>Each preference should be on a separate line</li>
-                                        <li>If combination is not specified, it will be left empty</li>
-                                        <li>Cutoff percentage is optional</li>
-                                        <li>Empty lines will be ignored</li>
-                                        <li>The order is: College | Program | Combination | Cutoff</li>
-                                        <li>[Bookmarked] and [Locked] tags are also supported (e.g., `1. College - Program [Bookmarked]`)</li>
+                                        <li>Each preference must be on a separate line.</li>
+                                        <li>**College** and **Program** are required.</li>
+                                        <li>` - ` (dash separated by spaces) is required between College and Program.</li>
+                                        <li>`[Bookmarked]` and `[Locked]` tags are optional and can appear anywhere after the Program name.</li>
+                                        <li>Empty lines will be ignored.</li>
                                     </ul>
                                 </div>
                             </div>
@@ -924,28 +839,6 @@
                                     />
                                 </div>
                                 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Combination</label>
-                                    <input
-                                        type="text"
-                                        value={newPreference.combination}
-                                        onChange={(e) => setNewPreference({...newPreference, combination: e.target.value})}
-                                        placeholder="Enter combination (e.g., Best of Four, PCM, PCB)"
-                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                </div>
-                                
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Cutoff (Optional)</label>
-                                    <input
-                                        type="text"
-                                        value={newPreference.cutoff}
-                                        onChange={(e) => setNewPreference({...newPreference, cutoff: e.target.value})}
-                                        placeholder="e.g., 98.5%"
-                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                </div>
-
                                 <div className="flex items-center col-span-full mt-2">
                                     <input
                                         type="checkbox"
@@ -971,7 +864,7 @@
                             <div className="flex gap-4 mt-4">
                                 <button
                                     onClick={addPreference}
-                                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors shadow-md"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors shadow-md"
                                 >
                                     Add Preference
                                 </button>
@@ -1006,24 +899,6 @@
                                             type="text"
                                             value={editingPreference.program}
                                             onChange={(e) => setEditingPreference({...editingPreference, program: e.target.value})}
-                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Combination</label>
-                                        <input
-                                            type="text"
-                                            value={editingPreference.combination}
-                                            onChange={(e) => setEditingPreference({...editingPreference, combination: e.target.value})}
-                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Cutoff (Optional)</label>
-                                        <input
-                                            type="text"
-                                            value={editingPreference.cutoff}
-                                            onChange={(e) => setEditingPreference({...editingPreference, cutoff: e.target.value})}
                                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         />
                                     </div>
@@ -1073,7 +948,7 @@
                             <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"> {/* Adjusted grid for fewer filters */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Filter by College</label>
                                 <input
@@ -1095,21 +970,6 @@
                                     className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 />
                             </div>
-                            
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Combination</label>
-                                <select
-                                    value={filters.combination}
-                                    onChange={(e) => setFilters({...filters, combination: e.target.value})}
-                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                                >
-                                    <option value="">All Combinations</option>
-                                    {combinationOptions.map(combination => (
-                                        <option key={combination} value={combination}>{combination}</option>
-                                    ))}
-                                    <option value="empty">No Combination</option> {/* Option to filter for empty combinations */}
-                                </select>
-                            </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Bookmark</label>
@@ -1125,10 +985,10 @@
                             </div>
                         </div>
                         
-                        {(filters.college || filters.program || filters.combination || filters.bookmarked !== 'all') && (
+                        {(filters.college || filters.program || filters.bookmarked !== 'all') && ( /* Adjusted filter check */
                             <div className="flex flex-wrap gap-4 mt-4">
                                 <button
-                                    onClick={() => setFilters({college: '', program: '', combination: '', bookmarked: 'all'})}
+                                    onClick={() => setFilters({college: '', program: '', bookmarked: 'all'})} /* Adjusted filter reset */
                                     className="text-blue-600 hover:text-blue-800 font-medium"
                                 >
                                     Clear All Filters
@@ -1136,7 +996,7 @@
                                 {filteredPreferences.length > 0 && (
                                     <button
                                         onClick={bulkDeleteFilteredPreferences}
-                                        className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
+                                        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md"
                                         title={`Delete all ${filteredPreferences.length} currently filtered preferences`}
                                     >
                                         <X />
@@ -1185,7 +1045,7 @@
                                             <div className="flex items-center justify-between">
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-4 mb-2">
-                                                        <span className="bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1 rounded-full">
+                                                        <span className="bg-gray-200 text-gray-800 text-sm font-semibold px-3 py-1 rounded-full">
                                                             #{originalIndex + 1}
                                                         </span>
                                                         <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -1198,14 +1058,8 @@
                                                                 <Star filled={pref.bookmarked} className="w-5 h-5" />
                                                             </button>
                                                         </h3>
-                                                        {pref.cutoff && (
-                                                            <span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">
-                                                                {pref.cutoff}
-                                                            </span>
-                                                        )}
                                                     </div>
                                                     <p className="text-gray-700 mb-1">{pref.program}</p>
-                                                    <p className="text-gray-500 text-sm">{pref.combination}</p>
                                                 </div>
                                                 
                                                 <div className="flex items-center gap-2 flex-none no-print">
@@ -1250,7 +1104,7 @@
 
                                                     <button
                                                         onClick={() => handleEditPreference(pref)}
-                                                        className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+                                                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" /* Changed to blue */
                                                         title="Edit preference"
                                                         disabled={pref.locked} /* Disabled if locked */
                                                     >
@@ -1275,9 +1129,9 @@
                     </div>
 
                     {/* Summary */}
-                    <div className="mt-6 p-4 bg-blue-50 rounded-lg shadow-sm no-print">
-                        <h3 className="font-semibold text-blue-900 mb-2">Summary</h3>
-                        <p className="text-blue-800">
+                    <div className="mt-6 p-4 bg-gray-100 rounded-lg shadow-sm no-print"> {/* Changed to gray-100 */}
+                        <h3 className="font-semibold text-gray-800 mb-2">Summary</h3>
+                        <p className="text-gray-700"> {/* Changed to gray-700 */}
                             You have {preferences.length} preferences in your list. 
                             {filteredPreferences.length !== preferences.length && 
                                 ` Showing ${filteredPreferences.length} filtered results.`
