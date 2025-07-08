@@ -133,6 +133,9 @@
             const [draggedItem, setDraggedItem] = useState(null);
             const dragOverRef = useRef(null); // To keep track of the element being dragged over
 
+            // State to manage individual rank input values without immediate reordering
+            const [tempRankInput, setTempRankInput] = useState({}); // { preferenceId: 'currentInputValue' }
+
             // --- Refs for file inputs ---
             const fileInputRef = useRef(null);
             const textFileInputRef = useRef(null);
@@ -212,17 +215,18 @@
             };
 
             // --- Preference Actions ---
-            const updatePreferenceRank = (id, newRankInput) => {
+            // This function now handles the actual reordering after validation
+            const applyPreferenceRankUpdate = (id, newRank) => {
                 const currentRank = preferences.findIndex(pref => pref.id === id) + 1;
-                const parsedNewRank = parseInt(newRankInput, 10);
+                const parsedNewRank = parseInt(newRank, 10);
 
                 if (isNaN(parsedNewRank) || parsedNewRank < 1 || parsedNewRank > preferences.length) {
                     showMessageBox('Invalid Rank', `Please enter a rank between 1 and ${preferences.length}.`);
-                    return;
+                    return false; // Indicate failure
                 }
 
                 if (parsedNewRank === currentRank) {
-                    return; // No change needed
+                    return true; // No change needed, but valid input
                 }
 
                 const newPreferences = [...preferences];
@@ -230,8 +234,8 @@
                 newPreferences.splice(parsedNewRank - 1, 0, movedItem);
                 
                 updatePreferencesAndHistory(newPreferences);
+                return true; // Indicate success
             };
-
 
             const movePreference = (id, direction) => {
                 const currentIndex = preferences.findIndex(pref => pref.id === id);
@@ -572,6 +576,40 @@
                 }
                 setDraggedItem(null);
             };
+
+            // --- Rank Input Handlers ---
+            const handleRankInputChange = (prefId, value) => {
+                setTempRankInput(prev => ({ ...prev, [prefId]: value }));
+            };
+
+            const handleRankInputBlur = (prefId, originalIndex) => {
+                const inputValue = tempRankInput[prefId];
+                if (inputValue === undefined || inputValue === '') {
+                    // If input is empty, revert to original rank
+                    setTempRankInput(prev => ({ ...prev, [prefId]: originalIndex + 1 }));
+                    return;
+                }
+
+                const success = applyPreferenceRankUpdate(prefId, inputValue);
+                if (!success) {
+                    // If validation failed, revert the input field to its original valid rank
+                    setTempRankInput(prev => ({ ...prev, [prefId]: originalIndex + 1 }));
+                } else {
+                    // If successful, clear the temp state for this item
+                    setTempRankInput(prev => {
+                        const newState = { ...prev };
+                        delete newState[prefId];
+                        return newState;
+                    });
+                }
+            };
+
+            const handleRankInputKeyDown = (e, prefId, originalIndex) => {
+                if (e.key === 'Enter') {
+                    e.target.blur(); // Trigger blur to initiate validation and update
+                }
+            };
+
 
             return (
                 <div className="max-w-6xl mx-auto p-6 bg-white min-h-screen font-sans">
@@ -954,6 +992,11 @@
                             <div className="divide-y divide-gray-200">
                                 {filteredPreferences.map((pref, index) => {
                                     const originalIndex = preferences.findIndex(p => p.id === pref.id);
+                                    // Determine the value for the rank input: temp state if typing, else actual rank
+                                    const displayRank = tempRankInput[pref.id] !== undefined 
+                                                        ? tempRankInput[pref.id] 
+                                                        : originalIndex + 1;
+
                                     return (
                                         <div 
                                             key={pref.id} 
@@ -988,8 +1031,10 @@
                                                         type="number"
                                                         min="1"
                                                         max={preferences.length}
-                                                        value={originalIndex + 1}
-                                                        onChange={(e) => updatePreferenceRank(pref.id, e.target.value)}
+                                                        value={displayRank} /* Use displayRank for input value */
+                                                        onChange={(e) => handleRankInputChange(pref.id, e.target.value)}
+                                                        onBlur={() => handleRankInputBlur(pref.id, originalIndex)}
+                                                        onKeyDown={(e) => handleRankInputKeyDown(e, pref.id, originalIndex)}
                                                         className="rank-input p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
                                                         title="Edit Rank"
                                                     />
@@ -1080,4 +1125,3 @@
     </script>
 </body>
 </html>
-
